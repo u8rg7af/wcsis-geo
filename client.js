@@ -1,34 +1,62 @@
-#!/usr/bin/env node
-var WebSocketClient = require('websocket').client;
+var W3CWebSocket = require('websocket').w3cwebsocket;
+
+var msg = {
+    latitude: "0",
+    longitude: "0",
+    type: "message",
+    text: "Walder Helmut",
+    id:   "55",
+    date: Date.now()
+};
+
+
+var client = new W3CWebSocket('ws://80.122.77.19:5003/', 'echo-protocol');
  
-var client = new WebSocketClient();
+client.onerror = function() {
+    console.log('Connection Error');
+};
  
-client.on('connectFailed', function(error) {
-    console.log('Connect Error: ' + error.toString());
-});
- 
-client.on('connect', function(connection) {
+client.onopen = function() {
     console.log('WebSocket Client Connected');
-    connection.on('error', function(error) {
-        console.log("Connection Error: " + error.toString());
-    });
-    connection.on('close', function() {
-        console.log('echo-protocol Connection Closed');
-    });
-    connection.on('message', function(message) {
-        if (message.type === 'utf8') {
-            console.log("Received: '" + message.utf8Data + "'");
-        }
-    });
+ 
     
-    function sendNumber() {
-        if (connection.connected) {
-            var number = Math.round(Math.random() * 0xFFFFFF);
-            connection.sendUTF(number.toString());
-            setTimeout(sendNumber, 1000);
+    function sendPosition(position) {
+        msg.latitude = position.coords.latitude;
+ 
+        msg.longitude = position.coords.longitude;
+
+        myLocation = {lat: latitude, lng: longitude};
+        //marker = {lat: latitude, lng: longitude};
+
+        //sock.send(JSON.stringify(msg));
+    }
+    
+    
+    
+    function sendLocation() {
+        if (client.readyState === client.OPEN) {
+            client.send(JSON.stringify(msg));
+
+            setTimeout(sendLocation, 2000);
         }
     }
-    sendNumber();
-});
+    sendLocation();
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(sendPosition);
+            
+        } 
+    }
+
+};
  
-client.connect('ws://80.122.77.19:5003/', 'echo-protocol');
+client.onclose = function() {
+    console.log('Connection closed');
+};
+ 
+client.onmessage = function(e) {
+    if (typeof e.data === 'string') {
+        console.log("Received: '" + e.data + "'");
+    }
+};
